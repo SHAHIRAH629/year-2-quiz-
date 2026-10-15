@@ -1,0 +1,1117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0}</style>
+</head><body>
+<title>World Explorers</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&display=swap">
+<style>
+/* Layout: chunky cartoon "sticker" panels (thick ink outline + hard offset shadow) on a sky-and-hills backdrop.
+   Header HUD, 4-stop trail, one task screen at a time, mascot band at the bottom. Country colours: AU orange, CA red, UK blue. */
+:root{
+  --ink:#1e2a5a; --ink-soft:#4a5788; --paper:#ffffff; --cream:#fff7de;
+  --sun:#ffc93c; --coral:#ff6a5c; --leaf:#2fb36b; --grape:#7a5cff;
+  --au:#ff9f1c; --ca:#e63946; --uk:#2f5fd0;
+  --good:#1f9d57; --good-bg:#dcf8e6; --soft:#c26a00; --soft-bg:#fff0d6;
+  --font-display:"Fredoka","Baloo 2","Trebuchet MS",system-ui,sans-serif;
+  --font-body:"Nunito","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{
+  font-family:var(--font-body); font-size:clamp(17px,.9vw + 13px,22px); line-height:1.4;
+  color:var(--ink); background:#d9f2ff;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:12px 28px;
+}
+h1,h2,h3{font-family:var(--font-display);margin:0;line-height:1.1;text-wrap:balance}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button,[role="button"],input{touch-action:manipulation}
+:focus-visible{outline:4px solid var(--grape);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#app{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:14px;min-width:0}
+
+/* backdrop */
+.scenery{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;background:linear-gradient(#8fd6ff 0%,#c9edff 55%,#eafaff 100%)}
+.scenery .cl{position:absolute;opacity:.95;animation:drift 70s linear infinite}
+.scenery .c1{top:6%;left:-12%;width:210px}
+.scenery .c2{top:20%;left:-20%;width:150px;animation-duration:95s;animation-delay:-30s}
+.scenery .c3{top:11%;left:-15%;width:180px;animation-duration:120s;animation-delay:-70s}
+.scenery .bl{position:absolute;width:70px;animation:bob 6s ease-in-out infinite}
+.scenery .b1{top:26%;right:4%}
+.scenery .b2{top:48%;left:2%;width:54px;animation-delay:-2s}
+.scenery .hills{position:absolute;left:0;bottom:0;width:100%;height:24vh}
+@keyframes drift{to{transform:translateX(130vw)}}
+@keyframes bob{50%{transform:translateY(-14px) rotate(3deg)}}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand svg{width:clamp(48px,7vw,68px);height:auto;flex:none}
+.brand h1{font-size:clamp(1.5rem,3.6vw,2.5rem);text-transform:uppercase;letter-spacing:.03em;text-shadow:0 3px 0 #fff}
+.brand p{font-family:var(--font-display);font-weight:600;color:var(--uk);font-size:clamp(.95rem,1.8vw,1.25rem);letter-spacing:.04em;text-transform:uppercase}
+.hud{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.pill{display:flex;align-items:center;gap:8px;background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:5px 14px;font-family:var(--font-display);font-weight:600;font-size:1.1rem;box-shadow:0 4px 0 var(--ink);font-variant-numeric:tabular-nums}
+.pill svg{width:1.3em;height:1.3em;fill:var(--sun);stroke:var(--ink);stroke-width:2}
+.pill small{font-family:var(--font-body);font-weight:800;font-size:.7em;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.06em}
+.pill.pop{animation:pop .5s ease}
+@keyframes pop{40%{transform:scale(1.18) rotate(-3deg)}}
+.snd{width:52px;height:52px;border-radius:50%;border:3px solid var(--ink);background:var(--sun);box-shadow:0 4px 0 var(--ink);display:grid;place-items:center;padding:0}
+.snd svg{width:28px;height:28px}
+.snd[aria-pressed="true"]{background:#e3e6f2}
+.snd:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+
+.meter{display:grid;gap:8px;background:var(--paper);border:3px solid var(--ink);border-radius:22px;box-shadow:0 5px 0 var(--ink);padding:10px 16px}
+.trail{list-style:none;margin:0;padding:0;display:flex;justify-content:space-between;gap:6px}
+.trail li{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;font-family:var(--font-display);font-weight:600;font-size:.9rem;color:var(--ink-soft);min-width:0}
+.trail li::after{content:"";position:absolute;top:17px;left:calc(50% + 22px);right:calc(-50% + 22px);height:5px;border-radius:3px;background:#d4dbef}
+.trail li:last-child::after{display:none}
+.trail i{font-style:normal;width:36px;height:36px;border-radius:50%;border:3px solid var(--ink);background:#fff;display:grid;place-items:center;font-size:1.1rem;color:var(--ink);position:relative;z-index:1}
+.trail li.done i{background:var(--leaf);color:#fff}
+.trail li.done::after{background:var(--leaf)}
+.trail li.now i{background:var(--sun);animation:pulse 1.6s ease-in-out infinite}
+.trail li.now{color:var(--ink)}
+@keyframes pulse{50%{transform:scale(1.15)}}
+.barrow{display:flex;align-items:center;gap:12px}
+.bar{flex:1;height:16px;border-radius:999px;background:#e3e9f8;border:3px solid var(--ink);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:repeating-linear-gradient(45deg,var(--leaf) 0 12px,#45cf84 12px 24px);transition:width .5s ease}
+.barrow span{font-family:var(--font-display);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.starrow{display:flex;flex-wrap:wrap;gap:3px}
+.starrow svg{width:22px;height:22px;fill:#e1e6f4;stroke:#c3cbe4;stroke-width:1.5;transition:transform .3s}
+.starrow svg.on{fill:var(--sun);stroke:var(--ink);stroke-width:2;transform:scale(1.12)}
+
+/* panels */
+.panel{background:var(--paper);border:4px solid var(--ink);border-radius:30px;box-shadow:0 8px 0 var(--ink);padding:clamp(16px,2.6vw,30px);min-width:0}
+.badge{display:inline-block;font-family:var(--font-display);font-weight:600;font-size:.95rem;letter-spacing:.05em;text-transform:uppercase;background:var(--grape);color:#fff;border:3px solid var(--ink);border-radius:999px;padding:3px 14px}
+.lead{font-size:1.25em;font-weight:700}
+.tiny{font-size:.8em;color:var(--ink-soft);font-weight:700}
+.btn{font-family:var(--font-display);font-weight:600;font-size:1.3rem;background:var(--sun);color:var(--ink);border:4px solid var(--ink);border-radius:999px;padding:.55em 1.5em;min-height:60px;box-shadow:0 6px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 8px 0 var(--ink)}
+.btn:active{transform:translateY(5px);box-shadow:0 1px 0 var(--ink)}
+.btn.go{background:var(--leaf);color:#fff;text-shadow:0 2px 0 rgba(30,42,90,.35)}
+.btn.alt{background:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:0 6px 0 var(--ink)}
+.icon-btn{display:inline-grid;place-items:center;width:48px;height:48px;border-radius:50%;border:3px solid var(--ink);background:var(--sun);box-shadow:0 4px 0 var(--ink);padding:0;vertical-align:middle;flex:none}
+.icon-btn svg{width:26px;height:26px}
+.icon-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.nav{display:flex;flex-wrap:wrap;gap:12px;justify-content:flex-end;margin-top:14px}
+
+/* art */
+.scene{border:4px solid var(--ink);border-radius:22px;overflow:hidden;background:#cfeeff;line-height:0}
+.scene svg.art{display:block;width:100%;height:auto;aspect-ratio:4/3}
+.flag{display:block;width:100%;height:auto;border-radius:6px}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:24px;align-items:center}
+.hero h2{font-size:clamp(2rem,4.6vw,3.2rem)}
+.hero .stack{display:grid;gap:14px;justify-items:start}
+.hero label{font-weight:800}
+.hero input,.own input{font:inherit;font-weight:700;width:100%;max-width:420px;padding:.6em .9em;border:4px solid var(--ink);border-radius:18px;background:#fffdf5;color:var(--ink);min-height:56px}
+.au{color:#c46a00}.ca{color:var(--ca)}.uk{color:var(--uk)}
+.hero-art>svg{width:100%;max-width:380px;height:auto;display:block;margin:0 auto}
+.intro{display:grid;gap:16px;justify-items:center;text-align:center}
+.intro h2{font-size:clamp(1.8rem,4vw,2.8rem)}
+.fl3{display:flex;gap:16px;width:min(100%,460px)}
+.fl3>div{flex:1;border:3px solid var(--ink);border-radius:10px;overflow:hidden;box-shadow:0 4px 0 var(--ink)}
+.say-row{display:flex;gap:12px;align-items:center;justify-content:center}
+
+/* questions */
+.qhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.q-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:clamp(16px,3vw,30px);align-items:start}
+.qtext{font-size:clamp(1.4rem,2.8vw,2.1rem);display:flex;gap:12px;align-items:flex-start;margin-bottom:16px}
+.opts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(8px,1.6vw,16px)}
+.opt{display:flex;flex-direction:column;align-items:center;gap:8px;padding:10px 8px 12px;background:#fff;border:4px solid var(--ink);border-radius:22px;box-shadow:0 6px 0 var(--ink);font-family:var(--font-display);font-weight:600;font-size:clamp(1.05rem,2.1vw,1.55rem);min-height:120px;position:relative;transition:transform .1s,box-shadow .1s,background .15s}
+.opt .fb-flag{width:100%;border:2px solid var(--ink);border-radius:8px;overflow:hidden;line-height:0}
+.opt:hover:not(:disabled){transform:translateY(-3px);box-shadow:0 9px 0 var(--ink)}
+.opt:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
+.opt[aria-pressed="true"]{background:#fff3c4;outline:5px solid var(--sun);outline-offset:2px}
+.opt.right{background:var(--good-bg);border-color:var(--good);box-shadow:0 6px 0 var(--good)}
+.opt.right::after{content:"\2713";position:absolute;top:-14px;right:-10px;width:38px;height:38px;border-radius:50%;background:var(--good);color:#fff;border:3px solid var(--ink);display:grid;place-items:center;font-size:1.3rem;line-height:1}
+.opt.wrong{background:var(--soft-bg);border-color:#e08a2e;box-shadow:0 6px 0 #e08a2e;animation:shake .45s}
+.opt:disabled{cursor:default}
+.opt.dim{opacity:.5}
+@keyframes shake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.fb{min-height:3.2em;margin-top:16px;padding:10px 14px;border-radius:18px;border:3px dashed transparent;font-weight:800;font-size:1.05em}
+.fb:empty{padding:0;min-height:0;margin:0}
+.fb.good{background:var(--good-bg);border-color:var(--good);color:#0f6b3a}
+.fb.soft{background:var(--soft-bg);border-color:#e08a2e;color:var(--soft)}
+
+/* listening */
+.listen{display:grid;justify-items:center;gap:16px;text-align:center}
+.bigplay{width:clamp(130px,20vw,170px);aspect-ratio:1;border-radius:50%;border:5px solid var(--ink);background:var(--coral);box-shadow:0 9px 0 var(--ink);display:grid;place-items:center;padding:0;position:relative;color:#fff}
+.bigplay svg{width:52%;height:52%;fill:#fff;stroke:#fff}
+.bigplay:active{transform:translateY(6px);box-shadow:0 3px 0 var(--ink)}
+.bigplay.pulse{animation:pulse 1.2s ease-in-out infinite}
+.bigplay.playing::before,.bigplay.playing::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:4px solid var(--coral);animation:ring 1.2s ease-out infinite}
+.bigplay.playing::after{animation-delay:.6s}
+@keyframes ring{from{transform:scale(.85);opacity:.9}to{transform:scale(1.25);opacity:0}}
+.playlbl{font-family:var(--font-display);font-weight:600;font-size:1.3rem}
+.listen .opts{width:min(100%,640px)}
+.script{background:var(--cream);border:3px solid var(--ink);border-radius:16px;padding:10px 16px;font-weight:700;max-width:640px}
+.ttsnote{max-width:640px;background:var(--soft-bg);border:3px solid #e08a2e;border-radius:16px;padding:10px 14px;font-weight:700;display:grid;gap:8px;justify-items:start}
+.tickwrap{overflow-x:auto;max-width:100%;margin-top:18px}
+.tick{border-collapse:separate;border-spacing:0;margin:0 auto;border:3px solid var(--ink);border-radius:14px;overflow:hidden;font-family:var(--font-display);font-weight:600}
+.tick th,.tick td{border:1px solid #c9d3ee;text-align:center;padding:4px 0;width:clamp(36px,7vw,64px);height:36px}
+.tick th{background:var(--cream)}
+.tick td.fl{width:70px;padding:3px 6px}
+.tick td .ok{color:var(--good);font-size:1.4rem;line-height:1}
+.tick td .miss{color:#aab3d1;font-size:1.4rem;line-height:1}
+.tick td.cur{background:#fff3c4}
+
+/* matching */
+.mgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+.tray{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;align-content:start}
+.pcard{background:#fff;border:4px solid var(--ink);border-radius:20px;box-shadow:0 6px 0 var(--ink);padding:6px 6px 8px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;display:grid;gap:6px;text-align:center;font-family:var(--font-display);font-weight:600;transition:transform .12s}
+.pcard .scene{border-width:3px;border-radius:14px;pointer-events:none}
+.pcard span{font-size:.92rem;line-height:1.1;pointer-events:none}
+.pcard:hover{transform:translateY(-3px) rotate(-1deg)}
+.pcard.selected{outline:5px solid var(--sun);outline-offset:2px;transform:translateY(-4px) rotate(-1.5deg)}
+.pcard.lifted{opacity:.35}
+.pcard.ghost{position:fixed;z-index:60;pointer-events:none;transform:rotate(-4deg) scale(1.05);box-shadow:0 14px 24px rgba(30,42,90,.35);opacity:.97}
+.pcard.shake{animation:shake .45s}
+.pcard.placed{cursor:default;box-shadow:0 3px 0 var(--ink);border-width:3px;padding:4px 4px 6px}
+.pcard.placed:hover{transform:none}
+.pcard.placed span{font-size:.8rem}
+.pcard.revealed{outline:4px dashed #e08a2e;outline-offset:1px}
+.buckets{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.bucket{border:4px dashed var(--ink);border-radius:24px;padding:10px 12px;min-height:130px;display:grid;grid-template-rows:auto 1fr;gap:8px;transition:background .15s,transform .15s}
+.bucket.au{background:#fff1d3;color:var(--ink);border-color:#d77f00}
+.bucket.ca{background:#ffe1e3;color:var(--ink);border-color:#c42535}
+.bucket.uk{background:#dfe8ff;color:var(--ink);border-color:#2449a8}
+.bucket .bhead{display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:600;font-size:1.4rem}
+.bucket .bhead .flag{width:60px;border:2px solid var(--ink);border-radius:6px}
+.bucket .drop{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;align-content:start}
+.bucket.hot{box-shadow:0 0 0 5px var(--sun);cursor:pointer}
+.bucket.over{transform:scale(1.03);box-shadow:0 0 0 6px var(--leaf)}
+
+/* writing */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));gap:14px}
+.ccard{border:4px solid var(--ink);border-radius:22px;overflow:hidden;background:#fff;display:grid;grid-template-rows:auto 1fr;box-shadow:0 6px 0 var(--ink)}
+.ccard .scene{border:0;border-bottom:4px solid var(--ink);border-radius:0}
+.ccard .scene svg.art{aspect-ratio:16/8}
+.ccard .words{padding:10px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.ccard h3{padding:8px 12px 0;font-size:1.5rem;display:flex;align-items:center;gap:10px}
+.ccard h3 .flag{width:44px;border:2px solid var(--ink);border-radius:5px}
+.ccard.au h3{color:#b35e00}.ccard.ca h3{color:var(--ca)}.ccard.uk h3{color:var(--uk)}
+.chip{font:inherit;font-weight:800;border:3px solid var(--ink);border-radius:999px;background:#fff;padding:.25em .85em;min-height:44px;box-shadow:0 3px 0 var(--ink);transition:transform .08s}
+.chip:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.chip.au{background:#ffe3ae}.chip.ca{background:#ffc9cd}.chip.uk{background:#cddcff}.chip.xx{background:#e6dcff}
+.sub{font-family:var(--font-display);font-weight:600;font-size:1.15rem;margin:18px 0 8px}
+.starters{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:10px}
+.starters button{font-family:var(--font-display);font-weight:600;font-size:1.15rem;background:#fff;border:4px solid var(--ink);border-radius:18px;padding:.5em .8em;min-height:56px;box-shadow:0 4px 0 var(--ink)}
+.starters button[aria-pressed="true"]{background:var(--sun)}
+.builder{margin-top:14px;background:var(--cream);border:4px solid var(--ink);border-radius:22px;padding:14px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;font-family:var(--font-display);font-weight:600;font-size:clamp(1.3rem,2.6vw,2rem);min-height:90px}
+.slot{font:inherit;min-width:140px;min-height:52px;padding:.1em .6em;border:4px dashed var(--ink-soft);border-radius:14px;background:#fff;color:var(--ink-soft)}
+.slot.active{border-color:var(--grape);background:#f1ecff}
+.slot.filled{border-style:solid;border-color:var(--ink);color:var(--ink);background:#fff}
+.own{margin-top:14px;display:grid;gap:6px}
+.own label{font-weight:800}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:14px}
+.sample{margin-top:14px;display:grid;gap:10px}
+.sample .bubble2{border:3px solid var(--ink);border-radius:18px;padding:10px 14px;background:#fff;font-weight:700}
+.sample .bubble2 b{font-family:var(--font-display);display:block;font-size:.85em;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.sample .bubble2.mine{background:#e7fbe9}
+
+/* final */
+.final{display:grid;gap:18px;justify-items:center;text-align:center}
+.final h2{font-size:clamp(2rem,5vw,3.6rem);color:var(--grape)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:14px;width:100%}
+.stat{border:4px solid var(--ink);border-radius:22px;padding:12px;background:#fff;box-shadow:0 6px 0 var(--ink)}
+.stat b{display:block;font-family:var(--font-display);font-size:2.4rem;line-height:1;font-variant-numeric:tabular-nums}
+.stat span{font-weight:800;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;font-size:.8em}
+.stat:nth-child(1) b{color:var(--grape)}.stat:nth-child(2) b{color:var(--good)}.stat:nth-child(3) b{color:#d98a00}
+.cert{width:min(100%,780px);background:var(--cream);border:6px double var(--ink);outline:6px solid var(--sun);outline-offset:-18px;border-radius:26px;padding:clamp(22px,4vw,40px);display:grid;gap:10px;justify-items:center;box-shadow:0 8px 0 var(--ink)}
+.cert .ribbon{font-family:var(--font-display);font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--coral);color:#fff;border:3px solid var(--ink);padding:4px 22px;border-radius:8px;font-size:clamp(.9rem,2vw,1.2rem)}
+.cert svg.trophy{width:clamp(110px,18vw,150px);height:auto}
+.cert .nm{font-family:var(--font-display);font-weight:700;font-size:clamp(1.8rem,5vw,3rem);color:var(--uk);border-bottom:4px dotted var(--ink-soft);padding:0 20px;min-width:min(100%,320px);overflow-wrap:anywhere}
+.cert .fl3{width:min(100%,300px)}
+.bigstars{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.bigstars svg{width:30px;height:30px;fill:var(--sun);stroke:var(--ink);stroke-width:2}
+.bigstars svg.off{fill:#e6eaf6;stroke:#c3cbe4}
+
+/* mascots */
+.band{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:center;gap:10px 24px;margin-top:6px}
+.trio{display:flex;align-items:flex-end;gap:clamp(4px,2vw,20px)}
+.m{width:clamp(76px,13vw,140px);height:auto;display:block;transform-origin:50% 100%;animation:breathe 3.2s ease-in-out infinite}
+.trio .m:nth-child(2){animation-delay:-1s}.trio .m:nth-child(3){animation-delay:-2s}
+@keyframes breathe{50%{transform:scaleY(1.03) translateY(-2px)}}
+.band.dance .m{animation:hop .6s ease-in-out 3}
+.band.dance .m:nth-child(2){animation-delay:.12s}.band.dance .m:nth-child(3){animation-delay:.24s}
+@keyframes hop{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-30px) rotate(-7deg)}60%{transform:translateY(0) rotate(6deg)}80%{transform:translateY(-14px) rotate(-3deg)}}
+.band.tilt .m{animation:tilt .9s ease 1}
+@keyframes tilt{30%{transform:rotate(-6deg)}60%{transform:rotate(5deg)}}
+.bubble{position:relative;max-width:min(100%,460px);min-height:3.4em;display:flex;align-items:center;background:#fff;border:4px solid var(--ink);border-radius:24px;padding:10px 18px;font-family:var(--font-display);font-weight:600;font-size:clamp(1.05rem,2vw,1.5rem);box-shadow:0 5px 0 var(--ink);margin-bottom:24px}
+.bubble::before{content:"";position:absolute;left:-18px;bottom:22px;width:26px;height:26px;background:#fff;border-left:4px solid var(--ink);border-bottom:4px solid var(--ink);transform:rotate(45deg);border-bottom-left-radius:6px}
+.bubble.good{background:var(--good-bg)}.bubble.good::before{background:var(--good-bg)}
+.bubble.oops{background:var(--soft-bg)}.bubble.oops::before{background:var(--soft-bg)}
+
+#confetti{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:80}
+.fly{position:fixed;left:0;top:0;width:44px;height:44px;z-index:90;pointer-events:none}
+.fly svg{width:100%;height:100%;fill:var(--sun);stroke:var(--ink);stroke-width:2}
+
+@media (max-width:900px){
+  .mgrid{grid-template-columns:minmax(0,1fr)}
+  .tray{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:820px){
+  .hero,.q-grid{grid-template-columns:minmax(0,1fr)}
+  .hero-art{order:-1}
+  .bubble::before{display:none}
+}
+@media (max-width:520px){
+  .trail li{font-size:.75rem}
+  .trail li::after{left:calc(50% + 20px);right:calc(-50% + 20px)}
+  .starrow svg{width:17px;height:17px}
+  .opt{min-height:100px}
+  .nav .btn{flex:1}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+  .scenery .cl{display:none}
+}
+</style>
+
+<div class="scenery" aria-hidden="true">
+  <svg class="cl c1" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="60" cy="30" rx="50" ry="16"/><ellipse cx="38" cy="22" rx="24" ry="16"/><ellipse cx="78" cy="20" rx="26" ry="18"/></g></svg>
+  <svg class="cl c2" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="60" cy="30" rx="50" ry="16"/><ellipse cx="38" cy="22" rx="24" ry="16"/><ellipse cx="78" cy="20" rx="26" ry="18"/></g></svg>
+  <svg class="cl c3" viewBox="0 0 120 50"><g fill="#fff"><ellipse cx="60" cy="30" rx="50" ry="16"/><ellipse cx="38" cy="22" rx="24" ry="16"/><ellipse cx="78" cy="20" rx="26" ry="18"/></g></svg>
+  <svg class="bl b1" viewBox="0 0 70 100"><path d="M35 4C12 4 4 24 10 42 16 56 26 62 29 66H41C44 62 54 56 60 42 66 24 58 4 35 4Z" fill="#ff6a5c" stroke="#1e2a5a" stroke-width="3"/><path d="M35 4C26 14 24 50 29 66H41C46 50 44 14 35 4Z" fill="#ffc93c" stroke="#1e2a5a" stroke-width="3"/><path d="M29 66L31 78H39L41 66" fill="none" stroke="#1e2a5a" stroke-width="3"/><rect x="30" y="78" width="10" height="9" fill="#b9783f" stroke="#1e2a5a" stroke-width="3"/></svg>
+  <svg class="bl b2" viewBox="0 0 70 100"><path d="M35 4C12 4 4 24 10 42 16 56 26 62 29 66H41C44 62 54 56 60 42 66 24 58 4 35 4Z" fill="#7a5cff" stroke="#1e2a5a" stroke-width="3"/><path d="M35 4C26 14 24 50 29 66H41C46 50 44 14 35 4Z" fill="#fff" stroke="#1e2a5a" stroke-width="3"/><path d="M29 66L31 78H39L41 66" fill="none" stroke="#1e2a5a" stroke-width="3"/><rect x="30" y="78" width="10" height="9" fill="#b9783f" stroke="#1e2a5a" stroke-width="3"/></svg>
+  <svg class="hills" viewBox="0 0 1440 300" preserveAspectRatio="none"><path d="M0 120C240 40 420 60 640 120S1100 200 1440 90V300H0Z" fill="#8fdc98"/><path d="M0 190C260 120 500 140 760 190S1180 250 1440 170V300H0Z" fill="#5cc46a"/></svg>
+</div>
+
+<div id="app">
+  <header class="top">
+    <div class="brand">
+      <div id="brandGlobe" aria-hidden="true"></div>
+      <div><h1>World Explorers</h1><p>Listen, choose &amp; win!</p></div>
+    </div>
+    <div class="hud">
+      <div class="pill" title="Score"><small>Score</small><span id="score">0</span></div>
+      <div class="pill" id="starPill" title="Stars"><span id="starIcon"></span><span id="starCount">0</span></div>
+      <button class="snd" id="sndBtn" aria-pressed="false" aria-label="Sound is on. Press to turn the sound off."></button>
+    </div>
+  </header>
+
+  <section class="meter" aria-label="Your progress">
+    <ol class="trail" id="trail">
+      <li data-s="1"><i>1</i><span>Read</span></li>
+      <li data-s="2"><i>2</i><span>Listen</span></li>
+      <li data-s="3"><i>3</i><span>Match</span></li>
+      <li data-s="4"><i>4</i><span>Write</span></li>
+    </ol>
+    <div class="barrow"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="16" aria-valuenow="0" id="barBox"><i id="barFill"></i></div><span id="barText">0 / 16</span></div>
+    <div class="starrow" id="starRow" aria-hidden="true"></div>
+  </section>
+
+  <main id="stage" tabindex="-1"></main>
+
+  <footer class="band" id="band">
+    <div class="trio" id="trio"></div>
+    <div class="bubble" id="bubble" role="status" aria-live="polite">Hello, explorers!</div>
+  </footer>
+</div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+/* ---------- Art: all pictures are drawn here as inline SVG ---------- */
+const Art=(()=>{
+  const INK='#1e2a5a';
+  const ol=(w=3)=>`stroke="${INK}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"`;
+  const sp=(cx,cy,R,r,n,rot)=>{
+    rot=rot===undefined?-Math.PI/2:rot;const p=[];
+    for(let i=0;i<n*2;i++){const a=rot+i*Math.PI/n,d=i%2?r:R;p.push((cx+d*Math.cos(a)).toFixed(2)+','+(cy+d*Math.sin(a)).toFixed(2));}
+    return p.join(' ');
+  };
+  const LEAF='50,5 58,22 66,17 63,40 78,33 74,45 92,48 82,58 86,66 68,66 71,80 54,74 54,95 46,95 46,74 29,80 32,66 14,66 18,58 8,48 26,45 22,33 37,40 34,17 42,22';
+  const cloud=(x,y,s=1)=>`<g transform="translate(${x} ${y}) scale(${s})" fill="#fff"><ellipse rx="30" ry="14"/><ellipse cx="-20" cy="6" rx="20" ry="11"/><ellipse cx="22" cy="6" rx="22" ry="11"/></g>`;
+  const wrap=(inner)=>`<svg class="art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${inner}</svg>`;
+  const pine=(x,y,s,c1,c2)=>`<g transform="translate(${x} ${y}) scale(${s})"><rect x="-3" y="-6" width="6" height="12" fill="#7a4a2a"/><polygon points="0,-50 -16,-22 16,-22" fill="${c2}"/><polygon points="0,-36 -20,-8 20,-8" fill="${c1}"/><polygon points="0,-22 -24,6 24,6" fill="${c2}"/></g>`;
+  const leaf=(x,y,rot,c)=>`<path transform="translate(${x} ${y}) rotate(${rot})" d="M0 0C10-12 30-12 42 0 30 12 10 12 0 0Z" fill="${c}" ${ol(2.5)}/>`;
+
+  /* flags */
+  const ukIn='<rect width="60" height="40" fill="#012169"/><path d="M0 0L60 40M60 0L0 40" stroke="#fff" stroke-width="7"/><path d="M0 0L60 40M60 0L0 40" stroke="#c8102e" stroke-width="2.4"/><path d="M30 0V40M0 20H60" stroke="#fff" stroke-width="11"/><path d="M30 0V40M0 20H60" stroke="#c8102e" stroke-width="6.5"/>';
+  const flagIn=(c)=>{
+    if(c==='uk')return ukIn;
+    if(c==='au')return '<rect width="60" height="40" fill="#012169"/><svg x="0" y="0" width="30" height="20" viewBox="0 0 60 40">'+ukIn+'</svg>'
+      +`<polygon points="${sp(15,31,5.4,2.4,7)}" fill="#fff"/>`
+      +[[45,7,2.8],[38,18,2.8],[52,15,2.8],[45,33,2.8]].map(s=>`<polygon points="${sp(s[0],s[1],s[2],s[2]*.45,7)}" fill="#fff"/>`).join('')
+      +`<polygon points="${sp(49,23,1.8,.8,5)}" fill="#fff"/>`;
+    return `<rect width="60" height="40" fill="#fff"/><rect width="15" height="40" fill="#d52b1e"/><rect x="45" width="15" height="40" fill="#d52b1e"/><polygon transform="translate(15 5) scale(.3)" points="${LEAF}" fill="#d52b1e"/>`;
+  };
+  const NAMES={au:'the flag of Australia',ca:'the flag of Canada',uk:'the flag of the UK'};
+  const flag=(c)=>`<svg class="flag" viewBox="0 0 60 40" role="img" aria-label="${NAMES[c]}">${flagIn(c)}</svg>`;
+
+  /* mascots (viewBox 0 0 120 140) */
+  const kang=()=>`
+    <path d="M78 112C100 106 118 118 112 134 100 126 88 128 76 128Z" fill="#d48f52" ${ol()}/>
+    <ellipse cx="42" cy="132" rx="19" ry="7" fill="#d48f52" ${ol()}/><ellipse cx="78" cy="132" rx="19" ry="7" fill="#d48f52" ${ol()}/>
+    <ellipse cx="60" cy="94" rx="29" ry="36" fill="#e3a463" ${ol()}/>
+    <ellipse cx="60" cy="100" rx="18" ry="24" fill="#f8dcb0"/>
+    <circle cx="60" cy="88" r="9" fill="#e3a463" ${ol(2.5)}/><ellipse cx="53" cy="79" rx="3" ry="6" fill="#e3a463" ${ol(2)}/><ellipse cx="67" cy="79" rx="3" ry="6" fill="#e3a463" ${ol(2)}/>
+    <circle cx="57" cy="88" r="1.6" fill="${INK}"/><circle cx="63" cy="88" r="1.6" fill="${INK}"/>
+    <path d="M45 92Q60 106 75 92" fill="none" stroke="#b9773d" stroke-width="3.5" stroke-linecap="round"/>
+    <ellipse cx="32" cy="94" rx="7" ry="14" transform="rotate(15 32 94)" fill="#e3a463" ${ol()}/><ellipse cx="88" cy="94" rx="7" ry="14" transform="rotate(-15 88 94)" fill="#e3a463" ${ol()}/>
+    <ellipse cx="43" cy="16" rx="8" ry="20" transform="rotate(-12 43 16)" fill="#e3a463" ${ol()}/><ellipse cx="77" cy="16" rx="8" ry="20" transform="rotate(12 77 16)" fill="#e3a463" ${ol()}/>
+    <ellipse cx="43" cy="17" rx="3.5" ry="13" transform="rotate(-12 43 17)" fill="#f3b7a6"/><ellipse cx="77" cy="17" rx="3.5" ry="13" transform="rotate(12 77 17)" fill="#f3b7a6"/>
+    <circle cx="60" cy="42" r="24" fill="#e3a463" ${ol()}/>
+    <ellipse cx="60" cy="51" rx="13" ry="10" fill="#f8dcb0"/>
+    <ellipse cx="60" cy="46" rx="5.5" ry="3.6" fill="#4a2f2a"/>
+    <circle cx="50" cy="37" r="3.8" fill="${INK}"/><circle cx="70" cy="37" r="3.8" fill="${INK}"/><circle cx="51.2" cy="35.8" r="1.2" fill="#fff"/><circle cx="71.2" cy="35.8" r="1.2" fill="#fff"/>
+    <path d="M53 55Q60 61 67 55" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="43" cy="48" r="4" fill="#ff8f8f" opacity=".5"/><circle cx="77" cy="48" r="4" fill="#ff8f8f" opacity=".5"/>`;
+  const beav=()=>`
+    <ellipse cx="94" cy="118" rx="21" ry="11" transform="rotate(-22 94 118)" fill="#5a3a22" ${ol()}/>
+    <path d="M82 114l6 8M90 110l6 8M98 106l6 8" stroke="#8a5d3a" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="44" cy="132" rx="16" ry="7" fill="#7a4a2a" ${ol()}/><ellipse cx="76" cy="132" rx="16" ry="7" fill="#7a4a2a" ${ol()}/>
+    <ellipse cx="60" cy="98" rx="32" ry="36" fill="#9a6238" ${ol()}/>
+    <ellipse cx="60" cy="104" rx="20" ry="26" fill="#e0b98a"/>
+    <polygon transform="translate(50 91) scale(.2)" points="${LEAF}" fill="#e63946" ${ol(5)}/>
+    <ellipse cx="30" cy="98" rx="7" ry="14" transform="rotate(15 30 98)" fill="#9a6238" ${ol()}/><ellipse cx="90" cy="98" rx="7" ry="14" transform="rotate(-15 90 98)" fill="#9a6238" ${ol()}/>
+    <circle cx="36" cy="26" r="9" fill="#7a4a2a" ${ol()}/><circle cx="84" cy="26" r="9" fill="#7a4a2a" ${ol()}/><circle cx="36" cy="26" r="4" fill="#e0b98a"/><circle cx="84" cy="26" r="4" fill="#e0b98a"/>
+    <ellipse cx="60" cy="44" rx="28" ry="24" fill="#9a6238" ${ol()}/>
+    <ellipse cx="60" cy="54" rx="16" ry="11" fill="#e0b98a"/>
+    <ellipse cx="60" cy="47" rx="6.5" ry="4.3" fill="#2b1d16"/>
+    <rect x="54.5" y="54" width="5.5" height="11" rx="1.8" fill="#fff" ${ol(2.2)}/><rect x="60" y="54" width="5.5" height="11" rx="1.8" fill="#fff" ${ol(2.2)}/>
+    <circle cx="48" cy="37" r="4" fill="${INK}"/><circle cx="72" cy="37" r="4" fill="${INK}"/><circle cx="49.2" cy="35.8" r="1.3" fill="#fff"/><circle cx="73.2" cy="35.8" r="1.3" fill="#fff"/>
+    <circle cx="42" cy="50" r="4" fill="#ff8f8f" opacity=".45"/><circle cx="78" cy="50" r="4" fill="#ff8f8f" opacity=".45"/>`;
+  const bear=()=>`
+    <ellipse cx="44" cy="132" rx="16" ry="8" fill="#b57a43" ${ol()}/><ellipse cx="76" cy="132" rx="16" ry="8" fill="#b57a43" ${ol()}/>
+    <ellipse cx="44" cy="133" rx="7" ry="3.5" fill="#f0cf9f"/><ellipse cx="76" cy="133" rx="7" ry="3.5" fill="#f0cf9f"/>
+    <ellipse cx="60" cy="98" rx="30" ry="36" fill="#c98f55" ${ol()}/>
+    <ellipse cx="60" cy="104" rx="18" ry="24" fill="#f0cf9f"/>
+    <ellipse cx="31" cy="100" rx="7" ry="14" transform="rotate(15 31 100)" fill="#c98f55" ${ol()}/><ellipse cx="89" cy="100" rx="7" ry="14" transform="rotate(-15 89 100)" fill="#c98f55" ${ol()}/>
+    <circle cx="36" cy="22" r="11" fill="#c98f55" ${ol()}/><circle cx="84" cy="22" r="11" fill="#c98f55" ${ol()}/><circle cx="36" cy="23" r="5.5" fill="#f2b6a8"/><circle cx="84" cy="23" r="5.5" fill="#f2b6a8"/>
+    <circle cx="60" cy="44" r="27" fill="#c98f55" ${ol()}/>
+    <ellipse cx="60" cy="54" rx="14" ry="11" fill="#f0cf9f"/>
+    <ellipse cx="60" cy="48" rx="6" ry="4.2" fill="#2b1d16"/>
+    <path d="M60 52V57M53.5 57Q60 63 66.5 57" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="49" cy="38" r="3.8" fill="${INK}"/><circle cx="71" cy="38" r="3.8" fill="${INK}"/><circle cx="50.2" cy="36.8" r="1.2" fill="#fff"/><circle cx="72.2" cy="36.8" r="1.2" fill="#fff"/>
+    <polygon points="78,80 90,84 92,108 80,106" fill="#2f5fd0" ${ol(2.5)}/><path d="M80 90L91 94M80 98L91 102" stroke="#fff" stroke-width="2.4"/><path d="M80 94L91 98" stroke="#e63946" stroke-width="2.2"/>
+    <path d="M33 71Q60 88 87 71L90 82Q60 100 30 82Z" fill="#2f5fd0" ${ol(3)}/><path d="M32 76.5Q60 94 88 76.5" fill="none" stroke="#fff" stroke-width="3.5"/><path d="M32 76.5Q60 94 88 76.5" fill="none" stroke="#e63946" stroke-width="1.8"/>`;
+  const MASC={kangaroo:[kang,'a friendly kangaroo from Australia'],beaver:[beav,'a friendly beaver from Canada'],bear:[bear,'a friendly British bear']};
+  const mascot=(n)=>`<svg class="m" viewBox="0 0 120 140" role="img" aria-label="${MASC[n][1]}">${MASC[n][0]()}</svg>`;
+
+  /* scenes (viewBox 0 0 400 300) */
+  const mountains=()=>`
+    <polygon points="-10,205 60,130 130,205" fill="#93a8d2" ${ol(2.5)}/><polygon points="60,130 43,148 55,144 60,152 66,144 77,148" fill="#fff"/>
+    <polygon points="40,210 150,62 270,210" fill="#7a90bf" ${ol()}/><polygon points="150,62 119,104 135,97 150,111 165,97 184,104" fill="#fff"/>
+    <polygon points="190,210 300,80 410,210" fill="#6a80b0" ${ol()}/><polygon points="300,80 268,118 284,110 300,124 316,110 332,118" fill="#fff"/>`;
+  const sky=(c)=>`<rect width="400" height="300" fill="${c||'#9fdcff'}"/>`;
+  const sun=(x,y,r,c)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${c||'#ffd54a'}" ${ol(2.5)}/>`;
+  const rowPines=(y,s,step,off)=>{let h='';for(let i=0,x=off;x<420;i++,x+=step)h+=pine(x,y+((i*5)%7),s+((i*3)%4)*.06,i%2?'#1f8a50':'#27a05b',i%2?'#2aa862':'#1c7a47');return h;};
+  const waves=(c)=>[[40,232],[190,226],[300,248],[110,266],[250,280],[20,284]].map(w=>`<path transform="translate(${w[0]} ${w[1]})" d="M0 0q10-7 20 0t20 0" fill="none" stroke="${c||'#c9efff'}" stroke-width="3" stroke-linecap="round"/>`).join('');
+
+  const S={};
+  S.palace=()=>{
+    let flowers='';for(let r=0;r<2;r++)for(let i=0;i<18;i++){if(i>6&&i<11&&r<2)continue;flowers+=`<circle cx="${18+i*21+r*10}" cy="${268+r*14}" r="5.5" fill="${(i+r)%2?'#e63946':'#ffc93c'}" ${ol(1.6)}/>`;}
+    const win=(x,y)=>`<rect x="${x}" y="${y}" width="12" height="24" rx="3" fill="#6f86b8" ${ol(2)}/>`;
+    let w='';[52,74,96,118,266,288,310,332].forEach(x=>{w+=win(x,142)+win(x,186);});
+    const guard=(x)=>`<g transform="translate(${x} 0)"><rect x="-6" y="238" width="12" height="14" fill="#2c3a74" ${ol(2)}/><rect x="-9" y="212" width="18" height="30" rx="4" fill="#d6252f" ${ol(2)}/><circle cx="0" cy="206" r="7.5" fill="#f4cba7" ${ol(2)}/><rect x="-7.5" y="178" width="15" height="26" rx="7" fill="#2b2b3a" ${ol(2)}/></g>`;
+    return wrap(sky()+cloud(70,45,1)+cloud(330,62,.8)
+      +'<rect y="226" width="400" height="74" fill="#58c26a"/><polygon points="184,300 216,300 209,230 191,230" fill="#ead9ae"/>'
+      +`<rect x="36" y="128" width="328" height="100" fill="#f3e4c0" ${ol()}/><rect x="36" y="116" width="328" height="14" fill="#d6bf86" ${ol()}/>`
+      +`<rect x="146" y="98" width="108" height="130" fill="#f7ebcc" ${ol()}/><polygon points="136,100 200,64 264,100" fill="#e6cf95" ${ol()}/>`
+      +`<circle cx="200" cy="91" r="9" fill="#ffc93c" ${ol(2.5)}/><line x1="200" y1="64" x2="200" y2="32" ${ol()}/><rect x="200" y="32" width="28" height="17" fill="#e63946" ${ol(2.5)}/>`
+      +w
+      +'<rect x="160" y="118" width="8" height="30" fill="#fff"/><rect x="232" y="118" width="8" height="30" fill="#fff"/><rect x="178" y="118" width="8" height="30" fill="#fff"/><rect x="214" y="118" width="8" height="30" fill="#fff"/>'
+      +`<rect x="168" y="150" width="64" height="8" fill="#c9b27a" ${ol(2)}/><path d="M184 228V198Q200 176 216 198V228Z" fill="#6f86b8" ${ol(2.5)}/>`
+      +guard(112)+guard(288)+flowers);
+  };
+  S.koala=()=>wrap(sky('#c2eaff')+cloud(310,48,.9)+cloud(60,70,.7)
+    +'<ellipse cx="80" cy="305" rx="210" ry="70" fill="#9bd68c"/><ellipse cx="350" cy="312" rx="190" ry="70" fill="#86c97d"/>'
+    +`<path d="M296 300C302 230 288 160 310 84L340 86C326 160 348 230 346 300Z" fill="#cdbfa6" ${ol()}/><path d="M318 120C322 160 316 200 322 250M332 130C334 170 338 210 336 260" fill="none" stroke="#a89a82" stroke-width="3" stroke-linecap="round"/>`
+    +`<path d="M312 172C250 182 150 202 22 192L22 218C150 230 255 212 318 202Z" fill="#b6a58a" ${ol()}/>`
+    +leaf(300,60,-150,'#6fb59a')+leaf(330,40,-60,'#4f9a85')+leaf(345,70,-20,'#6fb59a')+leaf(285,95,160,'#4f9a85')+leaf(40,168,10,'#6fb59a')+leaf(70,150,-25,'#4f9a85')+leaf(20,205,30,'#4f9a85')+leaf(100,180,200,'#6fb59a')
+    +`<ellipse cx="190" cy="168" rx="48" ry="48" fill="#a8b2bd" ${ol()}/><ellipse cx="190" cy="178" rx="28" ry="32" fill="#dfe4e8"/>`
+    +`<ellipse cx="146" cy="170" rx="13" ry="30" transform="rotate(20 146 170)" fill="#a8b2bd" ${ol()}/><ellipse cx="234" cy="170" rx="13" ry="30" transform="rotate(-20 234 170)" fill="#a8b2bd" ${ol()}/>`
+    +`<ellipse cx="160" cy="213" rx="22" ry="12" fill="#98a3af" ${ol()}/><ellipse cx="220" cy="213" rx="22" ry="12" fill="#98a3af" ${ol()}/>`
+    +`<circle cx="148" cy="78" r="21" fill="#b3bcc6" ${ol()}/><circle cx="232" cy="78" r="21" fill="#b3bcc6" ${ol()}/><circle cx="148" cy="79" r="11" fill="#f2d2dc"/><circle cx="232" cy="79" r="11" fill="#f2d2dc"/>`
+    +`<circle cx="190" cy="100" r="40" fill="#b3bcc6" ${ol()}/>`
+    +`<circle cx="175" cy="96" r="5.5" fill="${INK}"/><circle cx="205" cy="96" r="5.5" fill="${INK}"/><circle cx="176.8" cy="94.2" r="1.8" fill="#fff"/><circle cx="206.8" cy="94.2" r="1.8" fill="#fff"/>`
+    +`<ellipse cx="190" cy="112" rx="12" ry="16" fill="#3b3446" ${ol(2.5)}/><ellipse cx="186" cy="106" rx="3.5" ry="5" fill="#fff" opacity=".35"/>`
+    +`<path d="M181 132Q190 139 199 132" fill="none" ${ol(2.5)}/><circle cx="162" cy="116" r="6" fill="#ff9bb0" opacity=".5"/><circle cx="218" cy="116" r="6" fill="#ff9bb0" opacity=".5"/>`
+    +leaf(120,60,-20,'#6fb59a')+leaf(86,90,30,'#4f9a85')+leaf(255,150,-30,'#4f9a85')+leaf(250,196,40,'#6fb59a'));
+  S.kangaroo=()=>wrap(sky('#ffe2a8')+sun(330,62,34,'#ffb02e')+cloud(70,50,.8)
+    +`<path d="M40 222Q50 170 100 164L180 166Q235 172 245 222Z" fill="#cf6a3e" ${ol()}/><path d="M80 214Q85 190 105 184M150 214Q150 196 165 188" fill="none" stroke="#a9502a" stroke-width="3" stroke-linecap="round"/>`
+    +`<path d="M0 232Q120 206 240 226T400 214V300H0Z" fill="#e8844f" ${ol()}/>`
+    +`<g transform="translate(330 214)"><rect x="-4" y="-34" width="8" height="40" fill="#8a5a36"/><ellipse cx="0" cy="-42" rx="26" ry="18" fill="#4fae6a" ${ol(2.5)}/></g>`
+    +'<ellipse cx="60" cy="268" rx="26" ry="10" fill="#6cbf66"/><ellipse cx="360" cy="276" rx="30" ry="11" fill="#6cbf66"/>'
+    +`<svg x="140" y="56" width="170" height="198" viewBox="0 0 120 140" overflow="visible">${kang()}</svg>`);
+  S.lake=()=>wrap(sky()+sun(335,48,24)+cloud(80,40,.8)+mountains()+rowPines(212,.6,22,8)
+    +'<rect y="206" width="400" height="94" fill="#3db7ea"/>'+waves()
+    +`<path d="M0 250Q60 236 112 270Q70 292 0 300Z" fill="#4cc26c" ${ol()}/><path d="M400 244Q340 236 298 272Q340 292 400 300Z" fill="#4cc26c" ${ol()}/>`
+    +pine(34,266,1.25,'#1f8a50','#2aa862')+pine(372,264,1.35,'#1f8a50','#2aa862')
+    +`<polygon points="150,250 262,250 246,270 166,270" fill="#e63946" ${ol()}/><rect x="192" y="226" width="18" height="26" rx="5" fill="#ffc93c" ${ol(2.5)}/><circle cx="201" cy="218" r="9" fill="#f4cba7" ${ol(2.5)}/><path d="M192 214Q201 204 210 214Z" fill="#2f5fd0" ${ol(2)}/><line x1="232" y1="226" x2="186" y2="276" ${ol()}/>`);
+  S.forest=()=>wrap(sky()+sun(60,50,24)+cloud(300,44,.8)+mountains()+'<rect y="204" width="400" height="96" fill="#4cc26c"/>'
+    +rowPines(222,.85,34,10)+rowPines(256,1.25,48,28)
+    +`<rect x="170" y="236" width="64" height="40" fill="#c88a4a" ${ol()}/><polygon points="160,238 202,204 244,238" fill="#8f4f2b" ${ol()}/><rect x="194" y="252" width="15" height="24" fill="#6b3b1f" ${ol(2)}/><rect x="178" y="246" width="11" height="11" fill="#ffe08a" ${ol(2)}/><rect x="216" y="246" width="11" height="11" fill="#ffe08a" ${ol(2)}/>`
+    +pine(46,304,2.4,'#1f8a50','#2aa862')+pine(356,304,2.6,'#27a05b','#1c7a47')+pine(110,300,1.7,'#27a05b','#1c7a47')+pine(300,300,1.8,'#1f8a50','#2aa862'));
+  S.bridge=()=>{
+    const tw=(x)=>`<g transform="translate(${x} 0)"><rect x="0" y="95" width="58" height="125" fill="#d7deec" ${ol()}/><polygon points="4,95 29,48 54,95" fill="#35488a" ${ol()}/><polygon points="-4,95 4,68 12,95" fill="#35488a" ${ol(2.5)}/><polygon points="46,95 54,68 62,95" fill="#35488a" ${ol(2.5)}/><rect x="10" y="118" width="8" height="18" rx="4" fill="#4a5f9f"/><rect x="40" y="118" width="8" height="18" rx="4" fill="#4a5f9f"/><rect x="25" y="112" width="8" height="24" rx="4" fill="#4a5f9f"/><rect x="10" y="150" width="8" height="18" rx="4" fill="#4a5f9f"/><rect x="40" y="150" width="8" height="18" rx="4" fill="#4a5f9f"/></g>`;
+    let hang='';[.22,.42,.62,.82].forEach(t=>{const x=(1-t)*(1-t)*96+2*t*(1-t)*40,y=(1-t)*(1-t)*100+2*t*(1-t)*120+t*t*192;hang+=`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x.toFixed(1)}" y2="196" stroke="#2f5fd0" stroke-width="3"/><line x1="${(400-x).toFixed(1)}" y1="${y.toFixed(1)}" x2="${(400-x).toFixed(1)}" y2="196" stroke="#2f5fd0" stroke-width="3"/>`;});
+    return wrap(sky('#a8dcff')+cloud(70,48,1)+cloud(330,70,.8)
+      +'<rect y="206" width="400" height="94" fill="#3a9bd8"/>'+waves('#bfe6ff')
+      +`<path d="M96 100Q40 120 0 192M304 100Q360 120 400 192" fill="none" stroke="#2f5fd0" stroke-width="5" stroke-linecap="round"/>`+hang
+      +tw(96)+tw(246)
+      +`<rect x="154" y="106" width="92" height="14" fill="#2f5fd0" ${ol(2.5)}/><path d="M164 108L176 118M180 108L192 118M196 108L208 118M212 108L224 118M228 108L240 118" stroke="#fff" stroke-width="2"/>`
+      +`<rect x="0" y="194" width="400" height="14" fill="#55659c" ${ol()}/>`
+      +`<rect x="36" y="172" width="42" height="22" rx="5" fill="#e63946" ${ol(2.5)}/><rect x="42" y="177" width="9" height="8" fill="#ffe08a"/><rect x="56" y="177" width="9" height="8" fill="#ffe08a"/><circle cx="46" cy="195" r="4.5" fill="${INK}"/><circle cx="68" cy="195" r="4.5" fill="${INK}"/>`
+      +`<polygon points="280,250 340,250 330,266 290,266" fill="#e63946" ${ol(2.5)}/><rect x="302" y="232" width="4" height="18" fill="${INK}"/><polygon points="306,234 324,248 306,248" fill="#fff" ${ol(2)}/>`);
+  };
+  S.beach=()=>{
+    const tower=(x,y,w,h)=>{let m='';for(let i=0;i<3;i++)m+=`<rect x="${x+i*(w/2-3.5)}" y="${y-8}" width="7" height="9" fill="#f7d58b" ${ol(2)}/>`;return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#f7d58b" ${ol()}/>`+m;};
+    return wrap(sky()+sun(70,50,26)+cloud(300,50,.9)
+      +'<rect y="128" width="400" height="76" fill="#2fb0e8"/><path d="M0 128Q20 118 40 128T80 128T120 128T160 128T200 128T240 128T280 128T320 128T360 128T400 128" fill="none" stroke="#bfeaff" stroke-width="4"/>'
+      +`<path d="M0 192Q100 176 200 192T400 188V300H0Z" fill="#ffe3a3" ${ol()}/>`
+      +`<rect x="132" y="236" width="136" height="38" fill="#f2c46f" ${ol()}/>`+tower(132,206,28,68)+tower(240,206,28,68)+tower(176,184,48,90)
+      +`<line x1="200" y1="176" x2="200" y2="146" ${ol()}/><polygon points="200,146 226,154 200,162" fill="#e63946" ${ol(2.5)}/><path d="M190 274V256Q200 242 210 256V274Z" fill="#c9964a" ${ol(2.5)}/>`
+      +`<line x1="338" y1="150" x2="332" y2="262" stroke="#8a5a36" stroke-width="5" stroke-linecap="round"/><path d="M290 176Q338 118 386 176Z" fill="#e63946" ${ol()}/><path d="M338 130Q316 150 312 176M338 130Q360 150 364 176" fill="none" stroke="#fff" stroke-width="5"/>`
+      +`<polygon points="52,268 100,268 94,292 58,292" fill="#2f5fd0" ${ol()}/><polygon points="${sp(40,282,9,4,5)}" fill="#ff9f1c" ${ol(2)}/>`);
+  };
+
+  /* small bits */
+  const speaker='<svg viewBox="0 0 24 24" fill="none" stroke="#1e2a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9H3z" fill="#1e2a5a"/><path d="M16 8.5a5 5 0 0 1 0 7M18.7 5.8a9 9 0 0 1 0 12.4"/></svg>';
+  const speakerOff='<svg viewBox="0 0 24 24" fill="none" stroke="#1e2a5a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9H3z" fill="#1e2a5a"/><path d="M16 9l5 6M21 9l-5 6"/></svg>';
+  const speakerBig='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9v6h4l5 4V5L7 9H3z" fill="#fff"/><path d="M16 8.5a5 5 0 0 1 0 7M18.7 5.8a9 9 0 0 1 0 12.4"/></svg>';
+  const star=(cls)=>`<svg viewBox="0 0 24 24" class="${cls||''}"><polygon points="${sp(12,12.6,11,4.6,5)}" stroke-linejoin="round"/></svg>`;
+  const globe=()=>`<svg viewBox="0 0 220 200" role="img" aria-label="A globe with three flags"><circle cx="110" cy="104" r="84" fill="#3db7ea" ${ol(4)}/>`
+    +`<path d="M52 74q26-26 56-8 12 20-8 34-28 12-48-4z" fill="#5cc46a" ${ol(3)}/><path d="M122 120q28-14 50 6-4 30-30 38-24 0-26-22z" fill="#5cc46a" ${ol(3)}/><path d="M128 52q20-12 34 6-6 14-22 12z" fill="#5cc46a" ${ol(3)}/>`
+    +`<path d="M40 70Q110 30 180 70" fill="none" stroke="#fff" stroke-width="3" opacity=".45"/>`
+    +[['au',28,34],['ca',92,6],['uk',160,30]].map(f=>`<g><line x1="${f[1]}" y1="${f[2]-4}" x2="${f[1]}" y2="${f[2]+44}" ${ol(4)}/><svg x="${f[1]}" y="${f[2]-4}" width="52" height="34" viewBox="0 0 60 40" overflow="hidden"><g>${flagIn(f[0])}</g></svg><rect x="${f[1]}" y="${f[2]-4}" width="52" height="34" fill="none" ${ol(3)}/></g>`).join('')
+    +'</svg>';
+  const mini=()=>`<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="34" r="26" fill="#3db7ea" ${ol(4)}/><path d="M16 26q8-10 18-3 3 8-3 12-10 3-15-2zM36 40q10-4 15 3-1 9-9 11-8 0-8-7z" fill="#5cc46a" ${ol(3)}/></svg>`;
+  const trophy=(tier)=>{
+    if(tier==='gold')return `<svg class="trophy" viewBox="0 0 120 140" role="img" aria-label="A gold trophy"><rect x="36" y="118" width="48" height="14" rx="5" fill="#e09b00" ${ol()}/><rect x="52" y="94" width="16" height="26" fill="#ffc93c" ${ol()}/><path d="M32 18H88V50Q88 90 60 96 32 90 32 50Z" fill="#ffc93c" ${ol()}/><path d="M32 28Q8 28 12 52 16 68 36 68M88 28Q112 28 108 52 104 68 84 68" fill="none" stroke="#e09b00" stroke-width="7" stroke-linecap="round"/><path d="M42 26V52Q42 76 56 86" fill="none" stroke="#fff3b0" stroke-width="5" stroke-linecap="round"/><polygon points="${sp(60,52,20,8.5,5)}" fill="#fff" ${ol(3)}/></svg>`;
+    return `<svg class="trophy" viewBox="0 0 120 140" role="img" aria-label="A silver star badge"><polygon points="34,64 56,64 52,128 38,114 24,122" fill="#2f5fd0" ${ol()}/><polygon points="64,64 86,64 96,122 82,114 68,128" fill="#e63946" ${ol()}/><circle cx="60" cy="46" r="38" fill="#cfd6e8" ${ol()}/><circle cx="60" cy="46" r="28" fill="#eef1fa" ${ol(2.5)}/><polygon points="${sp(60,47,20,8.5,5)}" fill="#ffc93c" ${ol(3)}/></svg>`;
+  };
+  const scene=(n,extra)=>`<div class="scene">${S[n]()}</div>`;
+  return {flag,flagIn,mascot,scene,speaker,speakerOff,speakerBig,star,globe,mini,trophy,LEAF};
+})();
+
+/* ---------- Helpers ---------- */
+const $=(s,r)=>(r||document).querySelector(s);
+const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const REDUCE=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Content ---------- */
+const CTRY={au:{name:'Australia'},ca:{name:'Canada'},uk:{name:'the UK'}};
+const KEYS=['au','ca','uk'];
+const P1=[
+  {scene:'palace',q:'Which country is it?',a:'uk',fact:'Buckingham Palace is in London, in the UK.'},
+  {scene:'koala',q:'Which country is famous for kangaroos and koalas?',a:'au',fact:'Kangaroos and koalas live in Australia.'},
+  {scene:'lake',q:'Which country has beautiful lakes, forests and high mountains?',a:'ca',fact:'Canada has beautiful lakes, forests and high mountains.'}
+];
+const P2=[
+  {t:'Come to Australia. Make a sandcastle on the beautiful beaches.',a:'au'},
+  {t:'Come to Canada. Catch a fish in one of the beautiful lakes.',a:'ca'},
+  {t:'Come to the UK. See Buckingham Palace and the famous Tower Bridge.',a:'uk'},
+  {t:'In Australia, you can see kangaroos and koalas.',a:'au'},
+  {t:'In Canada, you can watch whales or go horse riding.',a:'ca'},
+  {t:'Go to Scotland and listen to the music of bagpipes.',a:'uk'}
+];
+const P3=[
+  {id:'kangaroo',label:'a kangaroo',a:'au',fact:'Kangaroos live in Australia.'},
+  {id:'koala',label:'a koala',a:'au',fact:'Koalas live in Australia.'},
+  {id:'palace',label:'Buckingham Palace',a:'uk',fact:'Buckingham Palace is in London, in the UK.'},
+  {id:'bridge',label:'Tower Bridge',a:'uk',fact:'Tower Bridge is in London, in the UK.'},
+  {id:'lake',label:'a beautiful lake',a:'ca',fact:'Canada has beautiful lakes.'},
+  {id:'forest',label:'a forest with high mountains',a:'ca',fact:'Canada has big forests and high mountains.'}
+];
+const WORDS={
+  au:['kangaroo','koala','beach','swim','sea'],
+  ca:['lakes','forests','mountains','whales','horse riding'],
+  uk:['Buckingham Palace','Tower Bridge','Scotland','bagpipes']
+};
+const HELP={
+  todo:['make a sandcastle','catch a fish','watch whales','go horse riding','listen to bagpipes'],
+  because:['it is beautiful','it is fun','it is big','it is famous']
+};
+const STARTERS=[['Come to',null,'.'],['See the beautiful',null,'.'],['You can',null,'.'],['I like',null,'because',null,'.']];
+const STARTER_LABEL=['Come to ___.','See the beautiful ___.','You can ___.','I like ___ because ___.'];
+const SAMPLE={
+  au:'Come to Australia. See the kangaroo and the koala. Swim in the sea.',
+  ca:'Come to Canada. See the beautiful lakes and forests. You can watch whales.',
+  uk:'Come to the UK. See Buckingham Palace and Tower Bridge. Listen to bagpipes in Scotland.'
+};
+const VOC={
+  au:['australia','kangaroo','kangaroos','koala','koalas','beach','beaches','swim','sea','sandcastle','snorkel'],
+  ca:['canada','lake','lakes','forest','forests','mountain','mountains','whale','whales','horse','riding','fish'],
+  uk:['uk','england','london','buckingham','palace','tower','bridge','scotland','bagpipes','bagpipe','music']
+};
+const TOTAL=P1.length+P2.length+P3.length+1; // 16
+const MAXPTS=TOTAL*10;
+const CHEERS=['Excellent!','Wonderful!','Amazing!','Well done!'];
+
+/* ---------- State ---------- */
+let G;
+const freshState=()=>({name:'',score:0,correct:0,stars:0,done:0,sec:0});
+G=freshState();
+const stage=$('#stage');
+
+/* ---------- Sound effects (Web Audio, made in the browser) ---------- */
+const SFX={
+  ctx:null,muted:false,nb:null,
+  init(){
+    try{
+      if(!this.ctx){const AC=window.AudioContext||window.webkitAudioContext;if(AC)this.ctx=new AC();}
+      if(this.ctx&&this.ctx.state==='suspended')this.ctx.resume();
+    }catch(e){}
+  },
+  ready(){return this.ctx&&!this.muted;},
+  tone(f,t0,d,type,v){
+    const c=this.ctx,o=c.createOscillator(),g=c.createGain();
+    o.type=type||'sine';o.frequency.value=f;
+    g.gain.setValueAtTime(0.0001,t0);g.gain.linearRampToValueAtTime(v||.2,t0+.015);g.gain.exponentialRampToValueAtTime(.0001,t0+d);
+    o.connect(g);g.connect(c.destination);o.start(t0);o.stop(t0+d+.05);
+  },
+  clap(t0,v){
+    const c=this.ctx;
+    if(!this.nb){const n=Math.floor(c.sampleRate*.12),b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);this.nb=b;}
+    const s=c.createBufferSource();s.buffer=this.nb;s.playbackRate.value=.8+Math.random()*.6;
+    const f=c.createBiquadFilter();f.type='bandpass';f.frequency.value=1200+Math.random()*1800;f.Q.value=.7;
+    const g=c.createGain();g.gain.value=v;
+    s.connect(f);f.connect(g);g.connect(c.destination);s.start(t0);
+  },
+  applause(len){
+    if(!this.ready())return;
+    const t=this.ctx.currentTime,n=Math.round(len*34);
+    for(let i=0;i<n;i++){const k=Math.pow(Math.random(),.85)*len;this.clap(t+k,(.25+Math.random()*.45)*(1-k/(len*1.15)));}
+  },
+  win(){
+    if(!this.ready())return;
+    const t=this.ctx.currentTime;
+    [523.25,659.25,783.99,1046.5].forEach((f,i)=>this.tone(f,t+i*.09,.35,'triangle',.16));
+    this.applause(1.6);
+  },
+  oops(){
+    if(!this.ready())return;
+    const t=this.ctx.currentTime;
+    this.tone(392,t,.3,'sine',.12);this.tone(311.13,t+.2,.45,'sine',.1);
+  },
+  pop(){if(!this.ready())return;this.tone(660,this.ctx.currentTime,.09,'triangle',.08);},
+  fanfare(){
+    if(!this.ready())return;
+    const t=this.ctx.currentTime;
+    [[523.25,0,.18],[523.25,.2,.18],[523.25,.4,.18],[659.25,.6,.3],[783.99,.95,.25],[1046.5,1.25,.7]].forEach(n=>{this.tone(n[0],t+n[1],n[2]+.1,'triangle',.18);this.tone(n[0]/2,t+n[1],n[2]+.1,'sine',.1);});
+    this.applause(3.2);
+  }
+};
+
+/* ---------- Voice (the browser's own English voice) ---------- */
+const TTS={
+  ok:'speechSynthesis' in window&&'SpeechSynthesisUtterance' in window,
+  voice:null,cur:null,
+  load(){
+    if(!this.ok)return;
+    try{
+      const vs=speechSynthesis.getVoices()||[];
+      const en=vs.filter(v=>/^en([-_]|$)/i.test(v.lang));
+      if(!en.length)return;
+      const prefs=[/google uk english female/i,/microsoft (libby|sonia|maisie|jenny|aria)/i,/(samantha|karen|serena|moira|tessa|kate|susan|fiona)/i,/female/i];
+      let v=null;
+      for(const re of prefs){v=en.find(x=>re.test(x.name));if(v)break;}
+      this.voice=v||en.find(x=>/en[-_]GB/i.test(x.lang))||en[0];
+    }catch(e){}
+  },
+  stop(){if(this.ok){try{speechSynthesis.cancel();}catch(e){}}},
+  say(text,o){
+    o=o||{};
+    if(!this.ok||SFX.muted)return false;
+    if(!this.voice)this.load();
+    try{
+      const u=new SpeechSynthesisUtterance(text);
+      if(this.voice){u.voice=this.voice;u.lang=this.voice.lang;}else u.lang='en-GB';
+      u.rate=o.rate||.85;u.pitch=o.pitch||1.1;u.volume=1;
+      let started=false;
+      u.onstart=()=>{started=true;o.onstart&&o.onstart();};
+      u.onend=()=>{o.onend&&o.onend();};
+      u.onerror=(e)=>{if(e&&(e.error==='canceled'||e.error==='interrupted'))return;o.onfail&&o.onfail();};
+      this.cur=u;
+      speechSynthesis.cancel();
+      setTimeout(()=>{
+        try{speechSynthesis.speak(u);}catch(e){o.onfail&&o.onfail();}
+        setTimeout(()=>{if(!started&&!speechSynthesis.speaking&&!speechSynthesis.pending)o.onfail&&o.onfail();},2800);
+      },60);
+      return true;
+    }catch(e){o.onfail&&o.onfail();return false;}
+  }
+};
+if(TTS.ok){TTS.load();try{speechSynthesis.onvoiceschanged=()=>TTS.load();}catch(e){}}
+
+/* ---------- Mascots and speech bubble ---------- */
+const band=$('#band'),bubble=$('#bubble');
+$('#trio').innerHTML=Art.mascot('kangaroo')+Art.mascot('beaver')+Art.mascot('bear');
+let masT=null;
+const Mas={
+  say(t,kind){bubble.textContent=t;bubble.className='bubble '+(kind||'');},
+  cheer(t){
+    band.classList.remove('tilt','dance');void band.offsetWidth;band.classList.add('dance');
+    this.say(t,'good');clearTimeout(masT);masT=setTimeout(()=>band.classList.remove('dance'),2100);
+  },
+  oops(t){
+    band.classList.remove('tilt','dance');void band.offsetWidth;band.classList.add('tilt');
+    this.say(t,'oops');clearTimeout(masT);masT=setTimeout(()=>band.classList.remove('tilt'),1100);
+  }
+};
+
+/* ---------- Confetti and flying stars ---------- */
+const cv=$('#confetti'),cx=cv.getContext('2d');
+let parts=[],raf=0;
+function sizeCv(){const d=Math.min(window.devicePixelRatio||1,2);cv.width=innerWidth*d;cv.height=innerHeight*d;cx.setTransform(d,0,0,d,0,0);}
+window.addEventListener('resize',sizeCv);sizeCv();
+function confetti(n){
+  const cols=['#ff6a5c','#ffc93c','#2fb36b','#2f5fd0','#7a5cff','#ff9f1c','#ffffff'];
+  n=REDUCE?Math.min(n||120,30):(n||120);
+  for(let i=0;i<n;i++)parts.push({x:innerWidth*(.1+Math.random()*.8),y:-20-Math.random()*innerHeight*.35,vx:(Math.random()-.5)*4,vy:2+Math.random()*4,r:Math.random()*6.28,vr:(Math.random()-.5)*.3,s:6+Math.random()*8,c:rnd(cols),star:Math.random()<.28});
+  if(!raf)raf=requestAnimationFrame(tick);
+}
+function tick(){
+  cx.clearRect(0,0,innerWidth,innerHeight);
+  parts=parts.filter(p=>p.y<innerHeight+30);
+  for(const p of parts){
+    p.x+=p.vx;p.y+=p.vy;p.vy+=.06;p.r+=p.vr;p.vx*=.995;
+    cx.save();cx.translate(p.x,p.y);cx.rotate(p.r);cx.fillStyle=p.c;
+    if(p.star){cx.beginPath();for(let i=0;i<10;i++){const a=i*Math.PI/5-Math.PI/2,d=i%2?p.s*.5:p.s*1.1;cx.lineTo(Math.cos(a)*d,Math.sin(a)*d);}cx.closePath();cx.fill();}
+    else cx.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6);
+    cx.restore();
+  }
+  raf=parts.length?requestAnimationFrame(tick):0;
+  if(!parts.length)cx.clearRect(0,0,innerWidth,innerHeight);
+}
+function flyStar(from){
+  const pill=$('#starPill');
+  const done=()=>{pill.classList.remove('pop');void pill.offsetWidth;pill.classList.add('pop');};
+  if(!from||REDUCE||!from.getBoundingClientRect||!pill.animate){done();return;}
+  const a=from.getBoundingClientRect(),b=pill.getBoundingClientRect();
+  const el=document.createElement('div');el.className='fly';el.innerHTML=Art.star();document.body.appendChild(el);
+  const x0=a.left+a.width/2-22,y0=a.top+a.height/2-22,x1=b.left+b.width/2-22,y1=b.top+b.height/2-22;
+  const an=el.animate([{transform:`translate(${x0}px,${y0}px) scale(.3)`,opacity:0},{transform:`translate(${x0}px,${y0-50}px) scale(1.6) rotate(20deg)`,opacity:1,offset:.3},{transform:`translate(${x1}px,${y1}px) scale(.6) rotate(360deg)`,opacity:1}],{duration:900,easing:'ease-in-out'});
+  an.onfinish=()=>{el.remove();done();};
+}
+
+/* ---------- HUD ---------- */
+$('#brandGlobe').innerHTML=Art.mini();
+$('#starIcon').innerHTML=Art.star();
+$('#sndBtn').innerHTML=Art.speaker;
+$('#starRow').innerHTML=Array.from({length:TOTAL},()=>Art.star()).join('');
+function hud(){
+  $('#score').textContent=G.score;
+  $('#starCount').textContent=G.stars;
+  $('#barFill').style.width=(G.done/TOTAL*100)+'%';
+  $('#barText').textContent=G.done+' / '+TOTAL;
+  $('#barBox').setAttribute('aria-valuenow',G.done);
+  $$('#starRow svg').forEach((s,i)=>s.classList.toggle('on',i<G.stars));
+  $$('#trail li').forEach(li=>{const n=+li.dataset.s;li.classList.toggle('done',G.sec>n);li.classList.toggle('now',G.sec===n);li.querySelector('i').textContent=G.sec>n?'✓':n;});
+}
+$('#sndBtn').addEventListener('click',()=>{
+  SFX.init();SFX.muted=!SFX.muted;
+  const b=$('#sndBtn');b.setAttribute('aria-pressed',SFX.muted);
+  b.setAttribute('aria-label',SFX.muted?'Sound is off. Press to turn the sound on.':'Sound is on. Press to turn the sound off.');
+  b.innerHTML=SFX.muted?Art.speakerOff:Art.speaker;
+  if(SFX.muted)TTS.stop();else SFX.pop();
+});
+
+/* ---------- Rewards ---------- */
+function award(first,from){
+  G.score+=first?10:5;G.correct++;G.stars++;G.done++;hud();
+  const w=rnd(CHEERS);
+  SFX.win();confetti(110);Mas.cheer(w);flyStar(from);
+  TTS.say(w,{rate:.95,pitch:1.25});
+}
+function missed(){G.done++;hud();}
+function oops(msg,after){
+  SFX.oops();Mas.oops(msg);
+  TTS.say(msg,{rate:.9,pitch:1.1,onend:after});
+}
+function setFb(el,kind,html){el.className='fb '+(kind||'');el.innerHTML=html||'';}
+
+/* ---------- Screens ---------- */
+let firstRender=true;
+function render(html,hint){
+  TTS.stop();
+  stage.innerHTML=html;
+  hud();
+  if(hint)Mas.say(hint);
+  if(!firstRender)stage.scrollIntoView({block:'start',behavior:'auto'});
+  firstRender=false;
+}
+const flagBtn=(k)=>`<button class="opt" data-c="${k}" aria-pressed="false" aria-label="${CTRY[k].name}"><span class="fb-flag">${Art.flag(k)}</span><span>${CTRY[k].name}</span></button>`;
+const listenBtn=(id,label)=>`<button class="icon-btn" id="${id}" aria-label="${label||'Listen'}">${Art.speaker}</button>`;
+
+function screenStart(){
+  G=freshState();G.sec=0;
+  render(`<section class="panel hero">
+    <div class="stack">
+      <span class="badge">Year 2 English</span>
+      <h2>Hello, explorer!</h2>
+      <p class="lead">Let's travel to <b class="au">Australia</b>, <b class="ca">Canada</b> and <b class="uk">the UK</b>. Listen, choose and win stars!</p>
+      <label for="nameIn">What is your name?</label>
+      <input id="nameIn" maxlength="20" autocomplete="off" placeholder="Type your name here">
+      <button class="btn go" id="startBtn">Start the adventure!</button>
+      <p class="tiny">Tip: turn your sound on. You will hear a voice.</p>
+    </div>
+    <div class="hero-art">${Art.globe()}</div>
+  </section>`,'Hello! I am Kanga. Press Start!');
+  $('#startBtn').onclick=()=>{
+    SFX.init();SFX.pop();
+    G.name=($('#nameIn').value||'').trim();
+    screenIntro(1);
+  };
+  $('#nameIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('#startBtn').click();});
+}
+
+const INTRO={
+  1:{t:'Read and choose the country',l:'Look at the picture. Click the country.',n:'Part 1',hint:'Look at the picture. Which country is it?'},
+  2:{t:'Listen and choose the country',l:'Press the red button. Listen. Click the flag.',n:'Part 2',hint:'Press the red button and listen!'},
+  3:{t:'Match the picture',l:'Drag the picture to the country. Or tap the picture, then tap the country.',n:'Part 3',hint:'Which country is each picture from?'},
+  4:{t:'Write about a country',l:'Pick words. Make a sentence. You can type, too!',n:'Part 4',hint:'Now it is your turn to write!'}
+};
+function screenIntro(n){
+  G.sec=n;const d=INTRO[n];
+  render(`<section class="panel intro">
+    <span class="badge">${d.n}</span>
+    <h2>${d.t}</h2>
+    <div class="say-row"><p class="lead" id="introTxt">${d.l}</p>${listenBtn('introSay','Listen to the instructions')}</div>
+    <div class="fl3">${KEYS.map(k=>`<div>${Art.flag(k)}</div>`).join('')}</div>
+    <button class="btn go" id="goBtn">Let's go!</button>
+  </section>`,d.hint);
+  $('#introSay').onclick=()=>{SFX.init();TTS.say(d.t+'. '+d.l.replace(/_+/g,''),{});};
+  $('#goBtn').onclick=()=>{SFX.init();SFX.pop();[null,()=>screenQ1(0),()=>screenQ2(0),screenMatch,screenWrite][n]();};
+}
+
+/* ----- Part 1 ----- */
+function screenQ1(i){
+  G.sec=1;const q=P1[i];let att=0,locked=false;
+  render(`<section class="panel">
+    <div class="qhead"><span class="badge">Part 1 &middot; Question ${i+1} of ${P1.length}</span></div>
+    <div class="q-grid">
+      ${Art.scene(q.scene)}
+      <div>
+        <h2 class="qtext"><span>${q.q}</span>${listenBtn('qSay','Listen to the question')}</h2>
+        <div class="opts">${KEYS.map(flagBtn).join('')}</div>
+        <div class="fb" id="fb" role="status"></div>
+        <div class="nav" id="nav"></div>
+      </div>
+    </div>
+  </section>`,'Look at the picture. Click the country.');
+  $('#qSay').onclick=()=>{SFX.init();TTS.say(q.q,{});};
+  const fb=$('#fb');
+  $$('.opt').forEach(b=>b.onclick=()=>{
+    if(locked)return;SFX.init();
+    const c=b.dataset.c;
+    if(c===q.a){
+      locked=true;b.classList.add('right');$$('.opt').forEach(x=>{if(x!==b){x.disabled=true;x.classList.add('dim');}});
+      award(att===0,b);setFb(fb,'good','Yes! '+q.fact);next();
+    }else{
+      att++;b.classList.add('wrong');b.disabled=true;
+      if(att>=2){
+        locked=true;const r=$(`.opt[data-c="${q.a}"]`);r.classList.add('right');$$('.opt').forEach(x=>{x.disabled=true;if(x!==r&&!x.classList.contains('wrong'))x.classList.add('dim');});
+        missed();SFX.oops();Mas.oops("Let's learn it together!");setFb(fb,'soft','The answer is '+CTRY[q.a].name+'. '+q.fact);next();
+      }else{
+        oops("Good try! Let's try again!");setFb(fb,'soft',"Good try! Look at the picture again and try one more time.");
+      }
+    }
+  });
+  function next(){
+    const last=i===P1.length-1;
+    $('#nav').innerHTML=`<button class="btn go" id="nx">${last?'Go to Part 2':'Next question'}</button>`;
+    $('#nx').onclick=()=>{SFX.pop();last?screenIntro(2):screenQ1(i+1);};
+    $('#nx').focus({preventScroll:true});
+  }
+}
+
+/* ----- Part 2 ----- */
+const tickState=[];
+function tickTable(cur){
+  const head='<tr><th></th>'+P2.map((_,i)=>`<th>${i+1}</th>`).join('')+'</tr>';
+  const rows=KEYS.map(k=>`<tr><td class="fl">${Art.flag(k)}</td>`+P2.map((q,i)=>{
+    const t=tickState[i];let cell='';
+    if(t&&q.a===k)cell=t==='ok'?'<span class="ok" aria-label="correct">✓</span>':'<span class="miss" aria-label="missed">✓</span>';
+    return `<td class="${i===cur?'cur':''}">${cell}</td>`;
+  }).join('')+'</tr>').join('');
+  return `<div class="tickwrap"><table class="tick" aria-label="Tick table"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+}
+function screenQ2(i){
+  G.sec=2;if(i===0)tickState.length=0;
+  const q=P2[i];let att=0,locked=false,sel=null,played=false,failed=false;
+  render(`<section class="panel">
+    <div class="qhead"><span class="badge">Part 2 &middot; Listen ${i+1} of ${P2.length}</span></div>
+    <div class="listen">
+      <button class="bigplay pulse" id="play" aria-label="Play the sentence">${Art.speakerBig}</button>
+      <div class="playlbl" id="plbl">Press to listen</div>
+      <div class="ttsnote" id="ttsnote" hidden><span>No voice found on this device. Ask your teacher to read the sentence to you.</span><button class="btn alt" id="showTxt" style="min-height:44px;font-size:1rem;padding:.3em 1em">Teacher: show the sentence</button></div>
+      <h2 class="qtext" style="margin:0">Which country?</h2>
+      <div class="opts" id="opts">${KEYS.map(flagBtn).join('')}</div>
+      <button class="btn go" id="check" disabled>Check my answer</button>
+      <div class="fb" id="fb" role="status" style="width:min(100%,640px)"></div>
+      <div id="scriptBox" style="width:min(100%,640px)"></div>
+      <div class="nav" id="nav" style="width:min(100%,640px)"></div>
+    </div>
+    ${tickTable(i)}
+  </section>`,'Press the red button and listen!');
+  const play=$('#play'),fb=$('#fb');
+  if(!TTS.ok)showNote();
+  function showNote(){if(!stage.contains(play))return;failed=true;$('#ttsnote').hidden=false;}
+  $('#showTxt').onclick=()=>{$('#scriptBox').innerHTML=`<div class="script">&ldquo;${esc(q.t)}&rdquo;</div>`;};
+  function speak(){
+    SFX.init();
+    play.classList.remove('pulse');
+    const stopAnim=()=>{play.classList.remove('playing');};
+    TTS.say(q.t,{rate:.78,pitch:1.05,
+      onstart:()=>{play.classList.add('playing');},
+      onend:stopAnim,
+      onfail:()=>{stopAnim();showNote();}});
+    played=true;$('#plbl').textContent='Press to listen again';
+    setTimeout(stopAnim,9000);
+  }
+  play.onclick=speak;
+  setTimeout(()=>{if(stage.contains(play)&&!played&&!SFX.muted)speak();},700);
+  $$('#opts .opt').forEach(b=>b.onclick=()=>{
+    if(locked)return;SFX.init();SFX.pop();
+    sel=b.dataset.c;
+    $$('#opts .opt').forEach(x=>x.setAttribute('aria-pressed',x===b?'true':'false'));
+    $('#check').disabled=false;
+  });
+  $('#check').onclick=()=>{
+    if(locked||!sel)return;SFX.init();
+    const b=$(`#opts .opt[data-c="${sel}"]`);
+    $$('#opts .opt').forEach(x=>x.setAttribute('aria-pressed','false'));
+    $('#check').disabled=true;
+    if(sel===q.a){
+      locked=true;b.classList.add('right');$$('#opts .opt').forEach(x=>{if(x!==b){x.disabled=true;x.classList.add('dim');}});
+      tickState[i]='ok';award(att===0,b);
+      setFb(fb,'good',`Yes! It is ${CTRY[q.a].name}.`);finish();
+    }else{
+      att++;b.classList.add('wrong');b.disabled=true;sel=null;
+      if(att>=2){
+        locked=true;const r=$(`#opts .opt[data-c="${q.a}"]`);r.classList.add('right');$$('#opts .opt').forEach(x=>{x.disabled=true;if(x!==r&&!x.classList.contains('wrong'))x.classList.add('dim');});
+        tickState[i]='miss';missed();SFX.oops();Mas.oops("That's OK! Let's learn it together!");
+        setFb(fb,'soft',`The answer is ${CTRY[q.a].name}. Good listening!`);finish();
+      }else{
+        play.classList.add('pulse');
+        oops("Good try! Let's listen again!",()=>{if(stage.contains(play))speak();});
+        setFb(fb,'soft',"Good try! Press the red button and listen again.");
+      }
+    }
+  };
+  function finish(){
+    $('#scriptBox').innerHTML=`<div class="script">You heard: &ldquo;${esc(q.t)}&rdquo;</div>`;
+    $('#ttsnote').hidden=true;
+    $('.tickwrap').outerHTML=tickTable(i);
+    const last=i===P2.length-1;
+    $('#nav').innerHTML=`<button class="btn go" id="nx">${last?'Go to Part 3':'Next sound'}</button>`;
+    $('#nx').onclick=()=>{SFX.pop();last?screenIntro(3):screenQ2(i+1);};
+    $('#nx').focus({preventScroll:true});
+  }
+}
+
+/* ----- Part 3 ----- */
+function screenMatch(){
+  G.sec=3;
+  const cards=shuffle(P3.slice());const att={};let placed=0,selected=null;
+  render(`<section class="panel">
+    <div class="qhead"><span class="badge">Part 3 &middot; Match the picture</span><span class="tiny" id="mcount">0 of ${P3.length} matched</span></div>
+    <div class="mgrid"><div class="tray" id="tray">${cards.map(c=>`<div class="pcard" tabindex="0" role="button" aria-label="${c.label}" data-id="${c.id}">${Art.scene(c.id)}<span>${c.label}</span></div>`).join('')}</div>
+    <div class="buckets">${KEYS.map(k=>`<div class="bucket ${k}" data-c="${k}" tabindex="0" role="button" aria-label="${CTRY[k].name} box"><div class="bhead">${Art.flag(k)}<span>${CTRY[k].name}</span></div><div class="drop"></div></div>`).join('')}</div></div>
+    <div class="fb" id="fb" role="status"></div>
+    <div class="nav" id="nav"></div>
+  </section>`,'Drag each picture to the right country!');
+  const fb=$('#fb');
+  const bucketAt=(x,y)=>{const e=document.elementFromPoint(x,y);return e&&e.closest?e.closest('.bucket'):null;};
+  function select(c){
+    $$('.pcard.selected').forEach(x=>x.classList.remove('selected'));
+    if(selected===c){selected=null;}else{selected=c;c.classList.add('selected');Mas.say('Now tap the country box.');}
+    $$('.bucket').forEach(b=>b.classList.toggle('hot',!!selected));
+  }
+  function drop(card,bucket,reveal){
+    card.dataset.done='1';card.classList.remove('selected','lifted');card.classList.add('placed');
+    if(reveal)card.classList.add('revealed');
+    selected=null;$$('.bucket').forEach(b=>b.classList.remove('hot'));
+    $('.drop',bucket).appendChild(card);
+    placed++;$('#mcount').textContent=placed+' of '+P3.length+' matched';
+    if(placed===P3.length){
+      $('#nav').innerHTML='<button class="btn go" id="nx">Go to Part 4</button>';
+      $('#nx').onclick=()=>{SFX.pop();screenIntro(4);};
+      $('#nx').focus({preventScroll:true});
+    }
+  }
+  function place(card,bucket){
+    const c=P3.find(x=>x.id===card.dataset.id);
+    att[c.id]=(att[c.id]||0)+1;
+    if(bucket.dataset.c===c.a){
+      drop(card,bucket);award(att[c.id]===1,bucket);setFb(fb,'good','Yes! '+c.fact);
+    }else if(att[c.id]>=2){
+      const r=$(`.bucket[data-c="${c.a}"]`);drop(card,r,true);missed();
+      SFX.oops();Mas.oops("That's OK! Let's learn it together!");setFb(fb,'soft',`It goes in ${CTRY[c.a].name}. ${c.fact}`);
+    }else{
+      card.classList.remove('shake');void card.offsetWidth;card.classList.add('shake');card.classList.remove('selected');selected=null;$$('.bucket').forEach(b=>b.classList.remove('hot'));
+      oops("Good try! Let's try again!");setFb(fb,'soft','Good try! Think about the picture. Try another box.');
+    }
+  }
+  $$('.pcard').forEach(card=>{
+    card.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!card.dataset.done){e.preventDefault();SFX.init();select(card);}});
+    card.addEventListener('pointerdown',e=>{
+      if(card.dataset.done||(e.pointerType==='mouse'&&e.button!==0))return;
+      SFX.init();
+      const sx=e.clientX,sy=e.clientY,r=card.getBoundingClientRect(),ox=sx-r.left,oy=sy-r.top;
+      let ghost=null,moved=false;
+      try{card.setPointerCapture(e.pointerId);}catch(_){}
+      const mv=ev=>{
+        if(!moved&&Math.hypot(ev.clientX-sx,ev.clientY-sy)>8){
+          moved=true;ghost=card.cloneNode(true);ghost.classList.add('ghost');ghost.style.width=r.width+'px';document.body.appendChild(ghost);card.classList.add('lifted');
+        }
+        if(ghost){
+          ghost.style.left=(ev.clientX-ox)+'px';ghost.style.top=(ev.clientY-oy)+'px';
+          if(ev.clientY<80)window.scrollBy(0,-14);else if(ev.clientY>innerHeight-80)window.scrollBy(0,14);
+          const t=bucketAt(ev.clientX,ev.clientY);$$('.bucket').forEach(b=>b.classList.toggle('over',b===t));
+        }
+      };
+      const end=ev=>{
+        card.removeEventListener('pointermove',mv);card.removeEventListener('pointerup',up);card.removeEventListener('pointercancel',cancel);
+        if(ghost)ghost.remove();card.classList.remove('lifted');$$('.bucket').forEach(b=>b.classList.remove('over'));
+      };
+      const up=ev=>{end();if(moved){const t=bucketAt(ev.clientX,ev.clientY);if(t)place(card,t);}else select(card);};
+      const cancel=()=>end();
+      card.addEventListener('pointermove',mv);card.addEventListener('pointerup',up);card.addEventListener('pointercancel',cancel);
+    });
+  });
+  $$('.bucket').forEach(b=>{
+    const go=()=>{if(selected){SFX.init();place(selected,b);}};
+    b.addEventListener('click',go);
+    b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+  });
+}
+
+/* ----- Part 4 ----- */
+function lev(a,b){
+  const m=a.length,n=b.length;if(!m)return n;if(!n)return m;
+  let p=Array.from({length:n+1},(_,j)=>j);
+  for(let i=1;i<=m;i++){const c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c;}
+  return p[n];
+}
+function hitCountry(w){
+  for(const k of KEYS)for(const v of VOC[k]){
+    if(w===v)return k;
+    if(w.length>=5&&v.length>=5&&lev(w,v)<=1)return k;
+    if(w.length>=9&&v.length>=9&&lev(w,v)<=2)return k;
+  }
+  return null;
+}
+function screenWrite(){
+  G.sec=4;
+  let tpl=0,slots=[],active=0,rewarded=false;
+  const chips=(arr,cls)=>arr.map(w=>`<button class="chip ${cls}" data-w="${esc(w)}">${esc(w)}</button>`).join('');
+  render(`<section class="panel">
+    <div class="qhead"><span class="badge">Part 4 &middot; Write about a country</span></div>
+    <div class="cgrid">${KEYS.map((k,i)=>{
+      const sc=['beach','lake','palace'][i];
+      return `<div class="ccard ${k}"><div>${Art.scene(sc)}<h3>${Art.flag(k)}<span>${CTRY[k].name}</span></h3></div><div class="words">${chips([CTRY[k].name],k)}${chips(WORDS[k],k)}</div></div>`;
+    }).join('')}</div>
+    <h3 class="sub">1. Pick a sentence starter</h3>
+    <div class="starters" id="starters">${STARTER_LABEL.map((s,i)=>`<button data-i="${i}" aria-pressed="${i===0}">${s}</button>`).join('')}</div>
+    <h3 class="sub">2. Tap words to fill the boxes</h3>
+    <div class="builder" id="builder" aria-live="polite"></div>
+    <div class="cgrid" style="margin-top:12px">
+      <div class="ccard"><div class="words">${chips(HELP.todo,'xx')}</div></div>
+      <div class="ccard"><div class="words">${chips(HELP.because,'xx')}</div></div>
+    </div>
+    <div class="own"><label for="own">Or type your own sentence:</label><input id="own" maxlength="140" autocomplete="off" placeholder="Come to Canada. See the beautiful lakes."></div>
+    <div class="row"><button class="btn go" id="sub">Check my sentence</button><button class="btn alt" id="clr">Clear</button></div>
+    <div class="fb" id="fb" role="status"></div>
+    <div class="sample" id="sample"></div>
+    <div class="nav" id="nav"></div>
+  </section>`,'Now it is your turn to write!');
+  const fb=$('#fb');
+  function setTpl(i){
+    tpl=i;slots=STARTERS[i].filter(x=>x===null).map(()=>'');active=0;
+    $$('#starters button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.i===i?'true':'false'));
+    drawBuilder();
+  }
+  function drawBuilder(){
+    let si=0;
+    $('#builder').innerHTML=STARTERS[tpl].map(t=>{
+      if(t===null){const i=si++;const v=slots[i];return `<button class="slot ${v?'filled':''} ${i===active?'active':''}" data-s="${i}" aria-label="${v?esc(v)+'. Press to clear.':'Empty box'}">${v?esc(v):'&nbsp;'}</button>`;}
+      return t==='.'?'<span>.</span>':`<span>${t}</span>`;
+    }).join('');
+    $$('#builder .slot').forEach(b=>b.onclick=()=>{
+      const i=+b.dataset.s;if(slots[i]){slots[i]='';}active=i;drawBuilder();
+    });
+  }
+  function built(){
+    if(slots.some(s=>!s))return null;
+    let si=0;
+    return STARTERS[tpl].map(t=>t===null?slots[si++]:t).join(' ').replace(/\s+\./g,'.');
+  }
+  $('#starters').onclick=e=>{const b=e.target.closest('button');if(b){SFX.init();SFX.pop();setTpl(+b.dataset.i);}};
+  $$('.chip').forEach(c=>c.onclick=()=>{
+    SFX.init();SFX.pop();
+    let i=slots.findIndex((s,k)=>k===active&&!s);if(i<0)i=slots.findIndex(s=>!s);if(i<0)i=slots.length-1;
+    slots[i]=c.dataset.w;
+    const nx=slots.findIndex(s=>!s);active=nx<0?i:nx;
+    drawBuilder();
+  });
+  $('#clr').onclick=()=>{SFX.pop();$('#own').value='';setTpl(tpl);setFb(fb,'','');$('#sample').innerHTML='';};
+  $('#sub').onclick=()=>{
+    SFX.init();
+    const typed=($('#own').value||'').trim();
+    const text=typed||built();
+    if(!text){setFb(fb,'soft','Fill all the boxes, or type your own sentence.');return;}
+    const words=(text.toLowerCase().match(/[a-z']+/g)||[]);
+    if(words.length<2){setFb(fb,'soft','Nice start! Add a few more words. Try: Come to Australia.');return;}
+    const tally={au:0,ca:0,uk:0};words.forEach(w=>{const k=hitCountry(w);if(k)tally[k]++;});
+    let best=KEYS.reduce((a,k)=>tally[k]>tally[a]?k:a,'au');if(!tally[best])best=null;
+    const sample=SAMPLE[best||rnd(KEYS)];
+    const praise=rnd(['Wonderful writing!','Great sentence!','Amazing work, explorer!','Well done!']);
+    $('#sample').innerHTML=`<div class="bubble2 mine"><b>Your sentence</b>${esc(text)}</div><div class="bubble2"><b>A sample sentence</b>${esc(sample)}</div>`;
+    setFb(fb,'good',praise+(best?` I can see you wrote about ${CTRY[best].name}.`:' I understand your idea!'));
+    if(!rewarded){rewarded=true;award(true,$('#sub'));}
+    else{SFX.win();confetti(60);Mas.cheer(praise);}
+    $('#nav').innerHTML='<button class="btn go" id="nx">Finish the quiz</button>';
+    $('#nx').onclick=()=>{SFX.pop();screenFinal();};
+  };
+  setTpl(0);
+}
+
+/* ----- Final ----- */
+function screenFinal(){
+  G.sec=5;
+  const pct=Math.round(G.correct/TOTAL*100),gold=pct>=80;
+  const nm=G.name||'World Explorer';
+  render(`<section class="panel final">
+    <h2>Congratulations, World Explorer!</h2>
+    <p class="lead">${gold?'You won the GOLD TROPHY! You are a super traveller!':'You travelled to three countries. You earned a Star Explorer badge! Play again to win the gold trophy.'}</p>
+    <div class="stats">
+      <div class="stat"><b>${G.score}</b><span>Score out of ${MAXPTS}</span></div>
+      <div class="stat"><b>${G.correct} / ${TOTAL}</b><span>Correct answers</span></div>
+      <div class="stat"><b>${G.stars}</b><span>Stars collected</span></div>
+    </div>
+    <div class="bigstars" aria-label="${G.stars} stars">${Array.from({length:TOTAL},(_,i)=>Art.star(i<G.stars?'':'off')).join('')}</div>
+    <div class="cert">
+      <div class="ribbon">World Explorer Certificate</div>
+      ${Art.trophy(gold?'gold':'silver')}
+      <p class="tiny">This certificate is for</p>
+      <div class="nm">${esc(nm)}</div>
+      <p class="lead">${gold?'Gold Trophy Winner':'Star Explorer'}</p>
+      <p>for travelling to Australia, Canada and the UK!</p>
+      <div class="fl3">${KEYS.map(k=>`<div>${Art.flag(k)}</div>`).join('')}</div>
+      <p class="tiny">${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</p>
+    </div>
+    <div class="row" style="justify-content:center"><button class="btn go" id="again">Play again</button></div>
+  </section>`,gold?'You are a champion! Hooray!':'Great job! You are a star!');
+  Mas.cheer(gold?'You are a champion! Hooray!':'Great job! You are a star!');
+  SFX.fanfare();confetti(220);setTimeout(()=>confetti(140),900);
+  TTS.say('Congratulations, World Explorer!',{rate:.9,pitch:1.25});
+  $('#again').onclick=()=>{SFX.pop();screenStart();};
+}
+
+/* ---------- Go ---------- */
+screenStart();
+
+</script>
+
+</body></html>
